@@ -1,0 +1,47 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!/src/main//target/
+!/src/test//target/
+
+STS
+
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+IntelliJ IDEA
+
+.idea
+*.iws
+*.iml
+*.ipr
+
+NetBeans
+
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!/src/main//build/
+!/src/test//build/
+
+VS Code
+
+.vscode/
+
+Local Configuration (機密情報保護)
+
+APIキーが含まれる設定ファイルをGitの管理から除外します
+
+/src/main/resources/application.properties
+
+もしローカル環境専用のプロファイル（application-local.properties等）を作る場合は、以下も有効です
+
+/src/main/resources/application-*.properties

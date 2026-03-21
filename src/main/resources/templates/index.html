@@ -3,277 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DevLog | アルフレッドの伴走</title>
+    <title>DevLog | with AI執事</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
-    <style>
-        /* グローバルスタイル定義
-           エンジニアの集中力を削がない低コントラストかつ清潔感のある配色を採用
-        */
-        body { background-color: #f1f3f5; font-family: 'Segoe UI', 'Meiryo', sans-serif; color: #333; }
-        .card { border-radius: 15px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        .ai-card { border-left: 6px solid #4e73df; background-color: #ffffff; }
-
-        /* コンテンツ表示制御
-           AIの出力が長文になった際のレイアウト崩れを防ぐため、
-           約15行分(400px)の高さでスクロールを許容する
-        */
-        .advice-box {
-            max-height: 400px;
-            overflow-y: auto;
-            background-color: #f8faff;
-            padding: 20px;
-            border-radius: 10px;
-            font-size: 0.95rem;
-            line-height: 1.7;
-            border: 1px solid #eef2f7;
-        }
-
-        /* 統計コンポーネント用スタイル */
-        .chart-container { height: 240px; position: relative; }
-        .heatmap-tile { transition: transform 0.1s; cursor: help; }
-        .heatmap-tile:hover { transform: scale(1.3); z-index: 10; }
-
-        /* 動的オーバーレイ演出
-           非同期通信(APIリクエスト)中のUX向上を目的とした視覚的フィードバック
-        */
-        #loading-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.95); z-index: 9999;
-            flex-direction: column; align-items: center; justify-content: center;
-        }
-
-        .is-invalid { border-color: #dc3545 !important; }
-    </style>
 </head>
 <body class="pb-5">
 
-<div id="loading-overlay">
-    <div id="alfred-face" style="font-size: 5rem;">🧐</div>
-    <h4 class="mt-4 fw-bold" id="alfred-text">分析の準備を整えております...</h4>
+<div class="container mt-4">
+
+    <div class="row mb-5 align-items-center">
+        <div class="col-md-4">
+            <form th:action="@{/}" method="get" class="d-flex bg-white rounded-pill shadow-sm overflow-hidden p-1 border">
+                <input type="text" name="keyword" class="form-control bg-transparent border-0 shadow-none ps-3" placeholder="記録を検索..." th:value="${param.keyword}">
+                <button class="btn border-0 text-muted pe-3" type="submit"><i class="bi bi-search"></i></button>
+            </form>
+        </div>
+
+        <div class="col-md-4 text-center">
+            <div class="butler-container">
+                <div class="d-inline-flex align-items-center py-2 px-4 bg-white rounded-pill shadow-sm border" style="cursor: help;">
+                    <div class="butler-icon">🤵‍♂️</div>
+                    <span class="fw-bold" style="color: var(--text-main);">AI執事 アルフレッド</span>
+                </div>
+                <div class="speech-bubble fw-normal">
+                    お帰りなさいませ。<br>
+                    日々の学習の軌跡を、データとAIの力で<br>
+                    ご主人様の確かな成長をサポートいたします。
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 text-end">
+            <button class="btn btn-dark rounded-pill px-4 shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#aiAdviceCollapse">
+                <i class="bi bi-stars me-2 text-warning"></i>執事の助言
+            </button>
+        </div>
+    </div>
+
+    <div class="collapse mb-5" id="aiAdviceCollapse">
+        <div class="card p-4" style="border-top: 4px solid var(--primary-color);">
+            <div class="d-flex align-items-center mb-3">
+                <i class="bi bi-cpu text-primary fs-4 me-2"></i>
+                <h5 class="mb-0 fw-bold">AI解析レポート</h5>
+            </div>
+            <div id="aiAdviceContent" class="text-secondary lh-lg" th:utext="${aiAdvice != null ? aiAdvice : 'データ解析中...'}"></div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card p-3 mb-4">
+                <h6 class="fw-bold mb-3 text-dark">新規ログの記録</h6>
+                <form th:action="@{/}" th:object="${newRecord}" method="post">
+                    <div th:if="${#fields.hasAnyErrors()}" class="alert alert-danger p-2 small rounded-3 mb-2">
+                        <ul class="mb-0 px-3">
+                            <li th:each="err : ${#fields.allErrors()}" th:text="${err}"></li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-2">
+                        <input type="text" th:field="*{title}" class="form-control" placeholder="タイトル (例: Spring Bootの基礎)">
+                    </div>
+
+                    <div class="mb-2">
+                        <div class="input-group">
+                            <input type="number" th:field="*{duration}" class="form-control" placeholder="学習時間">
+                            <span class="input-group-text bg-transparent border-0 text-muted py-0">分</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <textarea th:field="*{memo}" class="form-control" rows="3" placeholder="学びや課題を記述してください..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill py-1">保存・AI解析を実行</button>
+                </form>
+            </div>
+
+            <div class="card p-3 mb-4">
+                <h6 class="fw-bold mb-3 text-dark">アクティビティ</h6>
+                <div id="heatmap" class="d-flex flex-wrap"></div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div th:if="${records.empty}" class="text-center py-5">
+                <div class="butler-icon mb-3" style="width:60px; height:60px; font-size:2rem; background: none;">📝</div>
+                <h5 class="text-muted fw-bold">ログがありません</h5>
+                <p class="text-secondary small">ご主人様の最初の記録をお待ちしております。</p>
+            </div>
+
+            <div th:each="record : ${records}" class="card mb-3">
+                <div class="card-body p-3">
+
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h5 class="card-title fw-bold mb-1 text-dark" th:text="${record.title}">タイトル</h5>
+                            <div th:if="${record.aiTags != null}">
+                                <span th:each="tag : ${#strings.arraySplit(record.aiTags, ',')}"
+                                      class="tag-badge"
+                                      th:text="${tag.trim()}"></span>
+                            </div>
+                        </div>
+                        <span class="text-muted small" style="font-family: 'Inter', sans-serif;" th:text="${#temporals.format(record.createdAt, 'yyyy.MM.dd HH:mm')}"></span>
+                    </div>
+
+                    <p class="card-text text-secondary mb-3" style="white-space: pre-wrap; font-size: 0.95rem; line-height: 1.4;" th:text="${record.memo}"></p>
+
+                    <div th:if="${record.aiSummary != null}" class="ai-summary-box mb-2">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-stars text-primary mt-1 me-2"></i>
+                            <div>
+                                <strong class="small text-primary d-block mb-1">AI要約</strong>
+                                <span class="small" th:text="${record.aiSummary}"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                        <span class="text-muted small fw-bold">
+                            <i class="bi bi-clock me-1"></i>[[${record.duration}]] 分
+                        </span>
+
+                        <div class="d-flex gap-2">
+                            <a th:href="@{/edit/{id}(id=${record.id})}" class="btn btn-light btn-sm rounded-pill px-3 py-1 text-secondary">
+                                編集
+                            </a>
+                            <form th:action="@{/delete/{id}(id=${record.id})}" method="post"
+                                  onsubmit="return confirm('ご主人様、この記録を削除してもよろしいですか？');">
+                                <button type="submit" class="btn btn-light btn-sm rounded-pill px-3 py-1 text-danger">
+                                    削除
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<nav class="navbar navbar-dark bg-dark shadow-sm mb-4">
-    <div class="container">
-        <span class="navbar-brand fw-bold">DevLog <small class="fw-normal text-muted">Core System</small></span>
-    </div>
-</nav>
-
-<main class="container">
-    <div class="row g-4">
-
-        <div class="col-lg-5">
-
-            <article class="card ai-card mb-4" th:if="${aiAdvice}">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <span style="font-size: 1.5rem;" class="me-2">👨‍💼</span>
-                        <h2 class="h6 card-title fw-bold text-primary m-0">AI執事アルフレッドの助言</h2>
-                    </div>
-                    <div class="advice-box shadow-sm" id="advice-content" th:text="${aiAdvice}"></div>
-                </div>
-            </article>
-
-            <div class="text-center mb-4">
-                <div style="cursor:help; display: inline-block;" data-bs-toggle="tooltip" data-bs-html="true"
-                     title="アルフレッド：一流エンジニアを目指すご主人様を支える専属執事。テックリードの視点で分析を行います。">
-                    <div style="font-size: 2rem;">👨‍💼</div>
-                    <p class="text-muted small mb-0">AI執事：アルフレッド</p>
-                </div>
-            </div>
-
-            <section class="card mb-4">
-                <div class="card-body">
-                    <h3 class="h6 card-title fw-bold mb-3 text-muted">学習アクティビティ</h3>
-                    <div id="heatmap" class="d-flex flex-wrap gap-1"></div>
-                </div>
-            </section>
-
-            <section class="card mb-4">
-                <div class="card-body">
-                    <h3 class="h6 card-title fw-bold mb-3 text-muted">学習時間の推移 (分)</h3>
-                    <div class="chart-container">
-                        <canvas id="studyChart"></canvas>
-                    </div>
-                </div>
-            </section>
-
-            <section class="card mb-4">
-                <div class="card-body">
-                    <h3 class="h6 card-title fw-bold mb-4">本日の研鑽を記録する</h3>
-                    <form th:action="@{/add}" th:object="${newRecord}" method="post">
-                        <div class="mb-3">
-                            <label for="titleInput" class="form-label small fw-bold text-secondary">学習タイトル</label>
-                            <input type="text" th:field="*{title}" id="titleInput" class="form-control"
-                                   th:classappend="${#fields.hasErrors('title')} ? 'is-invalid'">
-                            <div class="invalid-feedback" th:errors="*{title}"></div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="durationInput" class="form-label small fw-bold text-secondary">学習時間 (分)</label>
-                            <input type="number" th:field="*{duration}" id="durationInput" class="form-control"
-                                   th:classappend="${#fields.hasErrors('duration')} ? 'is-invalid'">
-                            <div class="invalid-feedback" th:errors="*{duration}"></div>
-                        </div>
-                        <div class="mb-4">
-                            <label for="memoInput" class="form-label small fw-bold text-secondary">備考・メモ</label>
-                            <textarea th:field="*{memo}" id="memoInput" class="form-control" rows="3"></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow-sm">記録を保存する</button>
-                    </form>
-                </div>
-            </section>
-        </div>
-
-        <div class="col-lg-7">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <form action="/" method="get" class="d-flex gap-2">
-                    <label class="visually-hidden" for="searchKeyword">検索キーワード</label>
-                    <input type="text" name="keyword" id="searchKeyword" th:value="${keyword}"
-                           class="form-control form-control-sm border-0 shadow-sm"
-                           style="width: 220px;" placeholder="記録を検索...">
-                    <button type="submit" class="btn btn-sm btn-secondary shadow-sm px-3">検索</button>
-                </form>
-
-                <a href="/advice" class="btn btn-sm btn-outline-primary fw-bold shadow-sm" onclick="showLoading()">
-                    <span class="me-1">👨‍💼</span> AI執事アルフレッドの助言
-                </a>
-            </div>
-
-            <div class="card shadow-sm overflow-hidden">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                        <tr class="small text-muted text-uppercase">
-                            <th class="ps-4" style="width: 15%;">日付</th>
-                            <th style="width: 60%;">内容</th>
-                            <th style="width: 15%;">時間</th>
-                            <th class="pe-4 text-end" style="width: 10%;"></th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr th:each="record : ${records}">
-                            <td class="ps-4">
-                                <div class="fw-bold" th:text="${#temporals.format(record.createdAt, 'MM/dd')}"></div>
-                                <div class="text-muted" style="font-size: 0.7rem;" th:text="${#temporals.format(record.createdAt, 'HH:mm')}"></div>
-                            </td>
-                            <td>
-                                <div class="fw-bold text-dark" th:text="${record.title}"></div>
-                                <div class="small text-secondary text-truncate" style="max-width: 350px;" th:text="${record.memo}"></div>
-                            </td>
-                            <td>
-                                <span class="badge rounded-pill bg-light text-primary border border-primary-subtle px-3" th:text="${record.duration + ' m'}"></span>
-                            </td>
-                            <td class="pe-4 text-end">
-                                <a th:href="@{/delete/{id}(id=${record.id})}"
-                                   class="btn btn-link btn-sm text-danger text-decoration-none"
-                                   onclick="return confirm('削除しますか？')">削除</a>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</main>
-
 <script th:inline="javascript">
-    /* Thymeleafから渡されたJavaオブジェクトをJS変数として初期化 */
     const chartLabels = /*[[${chartLabels}]]*/ [];
     const chartData = /*[[${chartData}]]*/ [];
-    const activityData = /*[[${activityData}]]*/ {};
+</script>
 
-    /**
-     * 通信中のオーバーレイ表示とアルフレッドのアニメーションを制御
-     */
-    function showLoading() {
-        const overlay = document.getElementById('loading-overlay');
-        const face = document.getElementById('alfred-face');
-        const text = document.getElementById('alfred-text');
-        overlay.style.display = 'flex';
-
-        const faces = ['🧐', '🤔', '📖', '💡', '✍️'];
-        const messageList = ["記録を精査しております...", "分析を進めております...", "最適な助言を模索中です...", "まもなく報告いたします..."];
-        let i = 0;
-        setInterval(() => {
-            face.innerText = faces[i % faces.length];
-            text.innerText = messageList[i % messageList.length];
-            i++;
-        }, 1200);
-    }
-
-    /**
-     * DOM読み込み完了後のコンポーネント初期化
-     */
+<script>
     window.onload = function() {
-        // Markdownの変換（安全にパースを実行）
-        const content = document.getElementById('advice-content');
-        if(content && typeof marked !== 'undefined') {
-            content.innerHTML = marked.parse(content.innerText);
+        const aiAdviceEl = document.getElementById('aiAdviceContent');
+        if (aiAdviceEl && aiAdviceEl.textContent) {
+            aiAdviceEl.innerHTML = marked.parse(aiAdviceEl.textContent);
         }
 
-        // Bootstrapツールチップの有効化
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle=\"tooltip\"]'))
-        tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el) });
-
-        // 過去28日間の活動ヒートマップの描画
         const heatmapContainer = document.getElementById('heatmap');
-        const today = new Date();
-        for (let i = 27; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(today.getDate() - i);
-            const dateStr = d.toISOString().split('T')[0];
-            const count = activityData[dateStr] || 0;
-
-            const tile = document.createElement('div');
-            tile.className = 'heatmap-tile';
-            tile.style.width = '13px'; tile.style.height = '13px'; tile.style.borderRadius = '2px';
-            tile.title = `${dateStr} : ${count} 回の研鑽`;
-
-            //GitHubライクなカラーパレットを適用
-            if (count === 0) tile.style.backgroundColor = '#ebedf0';
-            else if (count === 1) tile.style.backgroundColor = '#9be9a8';
-            else if (count === 2) tile.style.backgroundColor = '#40c463';
-            else tile.style.backgroundColor = '#216e39';
-
-            heatmapContainer.appendChild(tile);
-        }
-
-        // 統計チャートのインスタンス生成
-        const ctx = document.getElementById('studyChart').getContext('2d');
-        if(typeof Chart !== 'undefined') {
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: chartLabels,
-                    datasets: [{
-                        data: chartData,
-                        borderColor: '#4e73df',
-                        backgroundColor: 'rgba(78, 115, 223, 0.05)',
-                        borderWidth: 2,
-                        tension: 0.3,
-                        fill: true,
-                        pointRadius: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { display: false },
-                        y: { beginAtZero: true, grid: { color: '#f0f0f0' }, ticks: { font: { size: 10 } } }
-                    }
-                }
-            });
+        if(heatmapContainer) {
+            for (let i = 0; i < 28; i++) {
+                const tile = document.createElement('div');
+                tile.className = 'heatmap-tile';
+                heatmapContainer.appendChild(tile);
+            }
         }
     };
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

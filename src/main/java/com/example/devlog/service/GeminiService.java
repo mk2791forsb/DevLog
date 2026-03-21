@@ -1,14 +1,16 @@
 package com.example.devlog.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import java.util.Map;
+
 import java.util.List;
-import java.util.HashMap;
+import java.util.Map;
 
 /**
- * Gemini APIと通信し、学習データに基づいた技術アドバイスを生成するサービス。
+ * Gemini APIと通信し、学習データの解析やアドバイス生成を行うサービス。
  */
 @Service
 public class GeminiService {
@@ -16,64 +18,100 @@ public class GeminiService {
     @Value("${google.gemini.api.key}")
     private String apiKey;
 
-    // APIエンドポイントのベースURL
-    private final String baseUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=";
+    // 最新の安定版モデルを使用します
+    private final String apiUrlBase = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=";
 
     /**
-     * 学習記録を解析し、AI執事としての技術的助言を取得します。
-     * @param learningData 整形された学習ログのテキスト
-     * @return AIによるMarkdown形式のアドバイス
+     * AIの解析結果を保持するデータ構造（Record）
+     */
+    public record AiAnalysisResponse(String summary, String tags) {}
+
+    /**
+     * 1. 既存機能：学習記録全体に基づいた執事のアドバイスを取得します。
      */
     public String getStudyAdvice(String learningData) {
-        if (apiKey == null || apiKey.isEmpty()) {
-            return "APIキーが設定されていません。application.propertiesを確認してください。";
+        if (learningData == null || learningData.isEmpty()) {
+            return "まだ記録がありませんね。まずは最初の一歩を記しましょう。";
         }
 
-        RestTemplate restTemplate = new RestTemplate();
-        String apiUrl = baseUrl + apiKey;
-
-        // AIへのシステム指示（キャラクター性、出力形式の定義）
         String prompt = String.format("""
             あなたは専属執事兼テックリードの『アルフレッド』です。
-            一流エンジニア（プログラマー）を目指して日々研鑽を積む『ご主人様』に対し、
-            提供された学習記録を分析して、技術的・精神的な助言を行ってください。
+            以下の学習記録を読み、プロの視点から短く、かつ励みになるアドバイスをください。
+            一人称は「私」、ご主人様を「ご主人様」と呼ぶこと。
             
-            ■出力の指針:
-            1. 一人称は「私（わたくし）」、二人称は「ご主人様」で統一すること。
-            2. 常に丁寧かつ謙虚な執事の口調でありながら、内容はプロのテックリードとして鋭く有益であること。
-            3. ご主人様の学習の継続を最大限に肯定し、モチベーションを高めること。
-            4. 説教や小言のような表現は避け、共感と建設的な提案を重視すること。
-            
-            ■出力形式:
-            - Markdown形式を使用し、適切な見出し（##）、箇条書き（-）で構造化すること。
-            - 文章が長くなる場合は、論点を整理して読みやすくすること。
-
-            ■学習記録データ:
+            ■学習記録:
             %s
             """, learningData);
 
-        // APIリクエストボディの構築
-        Map<String, Object> requestBody = new HashMap<>();
-        Map<String, Object> textPart = new HashMap<>();
-        textPart.put("text", prompt);
+        try {
+            String response = callGeminiApi(prompt);
+            return extractTextFromResponse(response);
+        } catch (Exception e) {
+            return "申し訳ございません。現在、アドバイスを生成する準備が整わないようです。";
+        }
+    }
 
-        Map<String, Object> content = new HashMap<>();
-        content.put("parts", List.of(textPart));
-        requestBody.put("contents", List.of(content));
+    /**
+     * 2. 新機能：特定の投稿内容を解析し、要約とタグを生成します。
+     */
+    public AiAnalysisResponse analyzeRecord(String title, String memo) {
+        String prompt = String.format("""
+            以下の学習内容を解析し、必ず指定のJSON形式で返してください。
+            1. summary: 内容の簡潔な要約（60文字以内）
+            2. tags: 技術キーワード（最大3つ、カンマ区切り）
+
+            ■タイトル: %s
+            ■メモ: %s
+
+            回答はJSONのみを返し、余計な説明は省いてください。
+            {"summary": "...", "tags": "..."}
+            """, title, memo);
 
         try {
-            // POSTリクエストの実行
-            Map<String, Object> response = restTemplate.postForObject(apiUrl, requestBody, Map.class);
+            String rawJson = callGeminiApi(prompt);
+            String content = extractTextFromResponse(rawJson);
 
-            // レスポンスからテキスト部分を抽出
-            List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
-            Map<String, Object> contentPart = (Map<String, Object>) candidates.get(0).get("content");
-            List<Map<String, Object>> parts = (List<Map<String, Object>>) contentPart.get("parts");
+            // AIが ```json { ... } ``` のように返してきた場合のノイズ除去
+            String cleanedJson = content.replaceAll("```json|```", "").trim();
 
-            return (String) parts.get(0).get("text");
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode result = mapper.readTree(cleanedJson);
+
+            return new AiAnalysisResponse(
+                    result.path("summary").asText("要約の生成に失敗しました"),
+                    result.path("tags").asText("なし")
+            );
         } catch (Exception e) {
-            // 通信失敗時のフォールバックメッセージ
-            return "## 通信エラー\n申し訳ございません。AIとの回線が不安定なようでございます。しばらく経ってから再度お呼びください。";
+            return new AiAnalysisResponse("解析エラーが発生しました", "Error");
         }
+    }
+
+    /**
+     * 【共通】Gemini APIへのPOSTリクエストを実行します。
+     */
+    private String callGeminiApi(String prompt) {
+        if (apiKey == null || apiKey.isEmpty()) {
+            throw new RuntimeException("APIキーが設定されていません。");
+        }
+
+        RestTemplate restTemplate = new RestTemplate();
+        Map<String, Object> requestBody = Map.of(
+                "contents", List.of(Map.of(
+                        "parts", List.of(Map.of("text", prompt))
+                ))
+        );
+
+        return restTemplate.postForObject(apiUrlBase + apiKey, requestBody, String.class);
+    }
+
+    /**
+     * 【共通】APIのレスポンスからテキスト部分のみを抽出します。
+     */
+    private String extractTextFromResponse(String responseBody) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(responseBody);
+        return root.path("candidates").get(0)
+                .path("content").path("parts").get(0)
+                .path("text").asText();
     }
 }

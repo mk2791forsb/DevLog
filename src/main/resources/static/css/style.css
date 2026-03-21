@@ -1,0 +1,198 @@
+@charset "utf-8";
+
+/* カスタム・デザインシステム */
+:root {
+    --primary-color: #4f46e5;
+    /* 背景色を10%ほど暗く調整 (#f0f2f5) */
+    --bg-color: #f0f2f5;
+    /* 罫線の色（非常に薄いグレー） */
+    --line-color: rgba(0, 0, 0, 0.035);
+
+    --surface-color: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+body {
+    background-color: var(--bg-color);
+    font-family: 'Inter', 'Noto Sans JP', sans-serif;
+    color: var(--text-main);
+    letter-spacing: 0.02em;
+
+    /* --- プロフェッショナル・ノートブック・テクスチャ --- */
+    /* CSSグラデーションで横罫線を描画 */
+    background-image: linear-gradient(var(--line-color) 1px, transparent 1px);
+    /* 罫線の間隔（行送り） */
+    background-size: 100% 28px;
+    /* スクロールしても罫線がずれないよう固定 */
+    background-attachment: fixed;
+}
+
+/* カードの洗練（フラットデザイン＋柔らかな影） */
+.card {
+    background: var(--surface-color);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.5);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+    /* カード内の罫線を背景色で隠す */
+    position: relative;
+    z-index: 1;
+}
+.card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+/* フォーム要素のモダナイズ（ご主人様仕様：コンパクト化） */
+.form-control {
+    background-color: #f1f5f9;
+    border: none;
+    border-radius: 8px;
+    /* 上下の余白を詰める */
+    padding: 0.5rem 0.8rem;
+    color: var(--text-main);
+    /* 行間を少し詰める */
+    line-height: 1.4;
+}
+.form-control:focus {
+    background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+    outline: none;
+}
+.form-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+/* AI解析結果の装飾（上下の余白を詰める） */
+.ai-summary-box {
+    background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%);
+    border-left: 4px solid var(--primary-color);
+    /* 上下の余白を詰める */
+    padding: 0.6rem 1rem;
+    border-radius: 0 12px 12px 0;
+    color: #1e293b;
+}
+
+/* タグのスタイリング */
+.tag-badge {
+    font-size: 0.7rem;
+    background-color: #e2e8f0;
+    color: #475569;
+    border-radius: 20px;
+    padding: 4px 10px;
+    margin-right: 6px;
+    font-weight: 500;
+}
+
+/* ボタンの最適化 */
+.btn-primary {
+    background-color: var(--primary-color);
+    border: none;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+.btn-primary:hover {
+    background-color: #4338ca;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.btn-light {
+    background-color: #f1f5f9;
+    color: var(--text-muted);
+    border: none;
+    font-weight: 600;
+}
+.btn-light:hover {
+    background-color: #e2e8f0;
+    color: var(--text-main);
+}
+
+/* 執事アイコン・共通定義 */
+/* 今回の修正：青丸を撤去し、エモジを大きく */
+.butler-icon {
+    /* 背景、円形、Flexbox、影を削除（元の値を上書き） */
+    width: auto;
+    height: auto;
+    background: none;
+    border-radius: 0;
+    display: inline-block; /* 親がFlexなのでinline-blockで横並びに */
+    box-shadow: none;
+
+    /* サイズ調整：エモジを天地40pxに拡張 */
+    font-size: 40px;
+    line-height: 1; /* 余計な上下の余白を出さない */
+    margin-right: 12px;
+}
+
+/* edit.htmlなどで使われる円形のアイコン定義は維持 */
+.header-icon {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    margin-bottom: 1rem;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.5);
+}
+
+/* --- 吹き出し（スピーチバブル） --- */
+.butler-container {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.speech-bubble {
+    position: absolute;
+    top: 100%;
+    margin-top: 15px; /* アイコンとの距離 */
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background-color: var(--text-main);
+    color: var(--surface-color);
+    padding: 16px 20px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+
+    width: max-content;
+    max-width: 450px; /* 枠の最大幅に余裕を持たせました */
+    white-space: nowrap; /* <br>以外の意図しない自動改行を【完全に禁止】します */
+    text-align: left;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: var(--shadow-md);
+    z-index: 1050;
+    pointer-events: none;
+}
+
+/* 吹き出しのしっぽ */
+.speech-bubble::before {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 8px;
+    border-style: solid;
+    border-color: transparent transparent var(--text-main) transparent;
+}
+
+.butler-container:hover .speech-bubble {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+.heatmap-tile { width: 12px; height: 12px; border-radius: 3px; margin: 2px; display: inline-block; background-color: #e2e8f0; }

@@ -34,3 +34,6 @@
 
 ・**記録更新画**<br>
 ![記録更新画面](screenshot/screenshot_2.png)
+
+・**記録更新画**<br>
+![AI解析アドバイス画面](screenshot/screenshot_3.png)

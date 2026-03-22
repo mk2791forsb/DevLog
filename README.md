@@ -31,7 +31,9 @@
 ### **スクリーンショット**
 ・**ダッシュボード画面**
 ![ダッシュボード初期画面](screenshot/screenshot_1.png)
+
 ・**記録更新画**
 ![記録更新画面](screenshot/screenshot_2.png)
+
 ・**記録更新画**
 ![AI解析アドバイス画面](screenshot/screenshot_3.png)

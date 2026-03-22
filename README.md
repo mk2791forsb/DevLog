@@ -29,4 +29,9 @@
 ・**テストの実施**：JUnitを用いたテストにおいて、ライブラリの配置やコンストラクタでの変数代入ミスを洗い出し、より堅牢なコードを目指して修正を重ねました。
 
 ### **スクリーンショット**
-![ダッシュボード画面](screenshot/screenshot_1.png)
+・**ダッシュボード画面**
+![ダッシュボード初期画面](screenshot/screenshot_1.png)
+・**記録更新画**
+![記録更新画面](screenshot/screenshot_2.png)
+・**記録更新画**
+![AI解析アドバイス画面](screenshot/screenshot_3.png)
